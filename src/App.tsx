@@ -1,7 +1,7 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useSyncExternalStore } from 'react'
 import './App.css'
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, query, where, onSnapshot, doc, getDoc, DocumentData, setDoc } from "firebase/firestore";
+import { getFirestore, onSnapshot, doc, DocumentData, setDoc, initializeFirestore, persistentLocalCache } from "firebase/firestore";
 
 function Star({field} : {field: string}) {
   return <Clickable field={field} true_value="⭐️" false_value="☆"/>
@@ -79,6 +79,7 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+initializeFirestore(app, {localCache: persistentLocalCache({})});
 
 const db = getFirestore(app);
 
@@ -94,7 +95,7 @@ function subscribe(onStoreChange: () => void) {
   });
 }
 
-function getSubscription() {
+function getSnapshot() {
   // const document = await getDoc(doc(db, "cities", "SF"));
   // return document.data();
   return data;
@@ -103,7 +104,7 @@ function getSubscription() {
 function useData() {
   return useSyncExternalStore(
     subscribe, 
-    getSubscription
+    getSnapshot
   );
 }
 
