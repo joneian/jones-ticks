@@ -1,19 +1,19 @@
-import { useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import './App.css'
 import { initializeApp } from "firebase/app";
 import { getFirestore, onSnapshot, doc, DocumentData, setDoc, initializeFirestore, persistentLocalCache } from "firebase/firestore";
 
-function Star({field} : {field: string}) {
-  return <Clickable field={field} true_value="⭐️" false_value="☆"/>
+function Star({field, today} : {field: string, today: string}) {
+  return <Clickable field={field} today={today} true_value="⭐️" false_value="☆"/>
 }
 
-function Tick({field} : {field: string}) {
-  return <Clickable field={field} true_value="✅" false_value="🔲"/>
+function Tick({field, today} : {field: string, today: string}) {
+  return <Clickable field={field} today={today} true_value="✅" false_value="🔲"/>
 }
 
-function Clickable({field, true_value, false_value} : {field: string, true_value: string, false_value: string}) {
+function Clickable({field, today, true_value, false_value} : {field: string, today: string, true_value: string, false_value: string}) {
   return <div className="row" onClick={() => {
-    setDoc(docRef, { [field]: data ? !data[field] : true }, { merge: true });
+    setDoc(doc(db, "tick_days", today), { [field]: data ? !data[field] : true }, { merge: true });
   }}> 
     <div className="clickable">
       {data && data[field] ? true_value : false_value}
@@ -21,14 +21,14 @@ function Clickable({field, true_value, false_value} : {field: string, true_value
   </div>
 }
 
-function Column({name} : {name: string}) {
+function Column({name, today} : {name: string, today: string}) {
   return <div className="column">
     <div className="row"> 
       <h2>{name}</h2>
     </div>
-    <Tick field={name + "_morning"}/>
-    <Tick field={name +"_afternoon"}/>
-    <Star field={name + "_star"}/>
+    <Tick field={name + "_morning"} today={today}/>
+    <Tick field={name +"_afternoon"}  today={today}/>
+    <Star field={name + "_star"} today={today}/>
   </div>
 }
 
@@ -48,7 +48,8 @@ function HeadingColumn() {
 
 }
 function App() {
-  const data = useData();
+  const today = useToday();
+  const data = useData(today);
   console.log(JSON.stringify(data));
   // const [selected, setSelected] = useState(false)
 
@@ -59,9 +60,9 @@ function App() {
         
         <HeadingColumn/>
 
-        <Column name="Florence"/>
-        <Column name="Dulcie"/>
-        <Column name="Violet"/>
+        <Column name="Florence" today={today}/>
+        <Column name="Dulcie" today={today}/>
+        <Column name="Violet" today={today}/>
       </div>
     </>
   )
@@ -82,18 +83,7 @@ const app = initializeApp(firebaseConfig);
 initializeFirestore(app, {localCache: persistentLocalCache({})});
 
 const db = getFirestore(app);
-
-const today = (new Date()).toISOString().split('T')[0];
-const docRef = doc(db, "tick_days", today);
-
 let data: DocumentData | undefined =  undefined;
-
-function subscribe(onStoreChange: () => void) {
-  return onSnapshot(docRef, (doc) => {
-    data = doc.data();
-    onStoreChange();
-  });
-}
 
 function getSnapshot() {
   // const document = await getDoc(doc(db, "cities", "SF"));
@@ -101,11 +91,38 @@ function getSnapshot() {
   return data;
 }
 
-function useData() {
+function useData(today: string) {
+  const subscribe = useCallback((onStoreChange: () => void) => {
+    return onSnapshot(doc(db, "tick_days", today), (doc) => {
+      data = doc.data();
+      onStoreChange();
+    });
+  }, [today]);
   return useSyncExternalStore(
     subscribe, 
     getSnapshot
   );
+}
+
+function getToday() {
+  return (new Date()).toISOString().split('T')[0];
+}
+
+function useToday() {
+  const [today, setToday] = useState(getToday());
+  
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log("visible");
+        setToday(getToday());
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, []);
+
+  return today;
 }
 
 export default App
