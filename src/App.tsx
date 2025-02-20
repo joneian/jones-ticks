@@ -36,10 +36,10 @@ function HeadingColumn() {
   return <div className="column">
     <div className="row"/> 
     <div className="row">
-      <h3>Morning:</h3>
+      <h3>AM:</h3>
     </div> 
     <div className="row">
-      <h3>Afternoon:</h3>
+      <h3>PM:</h3>
     </div>
     <div className="row">
       <h3>Star:</h3>
